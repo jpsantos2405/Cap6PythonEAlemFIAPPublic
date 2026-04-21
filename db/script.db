@@ -1,0 +1,42 @@
+CREATE TABLE animal (
+    idAnimal NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    identificadorAnimal VARCHAR2(50) NOT NULL UNIQUE,
+    racaAnimal VARCHAR2(50) NOT NULL,
+    sexoAnimal CHAR NOT NULL,
+    dataAdesaoAnimal DATE NOT NULL,
+    dataFalecimentoAnimal DATE,
+    motivoAnimal VARCHAR2(50),
+    idAnimalMae NUMBER,
+
+    CONSTRAINT fk_animal_mae
+        FOREIGN KEY (idAnimalMae)
+        REFERENCES animal(idAnimal),
+    CONSTRAINT chk_datas
+        CHECK (dataFalecimentoAnimal IS NULL OR dataFalecimentoAnimal >= dataAdesaoAnimal)
+);
+
+
+
+CREATE TABLE vacina (
+    idVacina NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    nomeVacina VARCHAR2(100) NOT NULL
+);
+
+CREATE TABLE agendamento (
+    idAgendamento NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    idVacina NUMBER NOT NULL,
+    idAnimal NUMBER NOT NULL,
+    dataAgendamento DATE NOT NULL,
+    statusAgendamento VARCHAR2(20) DEFAULT 'agendado',
+
+    CONSTRAINT fk_agendamento_vacina
+        FOREIGN KEY (idVacina)
+        REFERENCES vacina(idVacina),
+
+    CONSTRAINT fk_agendamento_animal
+        FOREIGN KEY (idAnimal)
+        REFERENCES animal(idAnimal),
+
+    CONSTRAINT chk_status_agendamento
+        CHECK (statusAgendamento IN ('agendado', 'aplicado', 'atrasado', 'cancelado'))
+);
