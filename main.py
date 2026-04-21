@@ -675,3 +675,218 @@ def relatorio_geral():
     print(f"Vivos: {vivos}")
     print(f"Mortos: {mortos}")
 
+# -------------- ARQUIVO txt --------------
+
+def gerar_relatorio_txt():
+    nome_arquivo = "arquivos/relatorio_fazenda.txt"
+
+    with open(nome_arquivo, "w", encoding="utf-8") as f:
+
+        f.write("===== RELATÓRIO COMPLETO DA FAZENDA =====\n\n")
+
+        # ---------------- ANIMAIS ----------------
+        dados = select("""
+            SELECT 
+                a.identificadorAnimal,
+                a.racaAnimal,
+                a.sexoAnimal,
+                mae.identificadorAnimal,
+                TO_CHAR(a.dataAdesaoAnimal,'DD/MM/YYYY'),
+                TO_CHAR(a.dataFalecimentoAnimal,'DD/MM/YYYY'),
+                a.motivoAnimal
+            FROM animal a
+            LEFT JOIN animal mae ON a.idAnimalMae = mae.idAnimal
+        """)
+        f.write("=== ANIMAIS ===\n")
+
+        for d in dados:
+            ident = d[0]
+            raca = d[1]
+            sexo = "Macho" if d[2] == "M" else "Fêmea"
+            mae = d[3] if d[3] else "Sem registro"
+            data_adesao = d[4]
+            data_morte = d[5]
+            motivo = d[6]
+
+            if data_morte:
+                status = f"MORTO em {data_morte} | Motivo: {motivo}"
+            else:
+                status = "VIVO"
+
+            f.write(
+                f"ID: {ident} | Raça: {raca} | Sexo: {sexo} | "
+                f"Mãe: {mae} | Entrada: {data_adesao} | {status}\n"
+            )
+
+        # ---------------- VACINAS ----------------
+        dados = select("SELECT nomeVacina FROM vacina")
+
+        f.write("\n=== VACINAS ===\n")
+        for d in dados:
+            f.write(f"Vacina: {d[0]}\n")
+
+        # ---------------- AGENDAMENTOS ----------------
+        dados = select("""
+            SELECT an.identificadorAnimal, v.nomeVacina,
+                   TO_CHAR(a.dataAgendamento,'DD/MM/YYYY'),
+                   a.statusAgendamento
+            FROM agendamento a
+            JOIN animal an ON a.idAnimal=an.idAnimal
+            JOIN vacina v ON a.idVacina=v.idVacina
+        """)
+
+        f.write("\n=== AGENDAMENTOS ===\n")
+        for d in dados:
+            f.write(f"{d[0]} | {d[1]} | {d[2]} | {d[3]}\n")
+
+    print(f"\n✔ Relatório salvo em: {nome_arquivo}")
+
+
+# -------------- BACKUP json --------------
+
+def exportar_json():
+    dados = select("""
+        SELECT an.identificadorAnimal,
+               an.racaAnimal,
+               v.nomeVacina,
+               TO_CHAR(a.dataAgendamento,'DD/MM/YYYY'),
+               a.statusAgendamento
+        FROM agendamento a
+        JOIN animal an ON a.idAnimal=an.idAnimal
+        JOIN vacina v ON a.idVacina=v.idVacina
+    """)
+
+    lista = []
+    for d in dados:
+        lista.append({
+            "animal": d[0],
+            "raca": d[1],
+            "vacina": d[2],
+            "data": d[3],
+            "status": d[4]
+        })
+
+    with open("arquivos/dados_fazenda.json", "w", encoding="utf-8") as f:
+        json.dump(lista, f, indent=4, ensure_ascii=False)
+
+    print("✔ JSON exportado: arquivos/dados_fazenda.json")
+
+# ---------------- SISTEMA ----------------
+
+while True:
+    atualizar_atrasados()
+    os.system('cls')
+    op = menu_principal()
+
+    match op:
+
+        case "1":
+            while True:
+                os.system('cls')
+                a = menu_secundario("ANIMAIS", """
+                1 - Cadastrar
+                2 - Listar vivos
+                3 - Editar
+                4 - Registrar morte
+                5 - Excluir
+                6 - Voltar
+                """)
+
+                match a:
+                    case "1": cadastrarAnimal()
+                    case "2": listar_animais_vivos()
+                    case "3": editar_animal()
+                    case "4": registrar_morte()
+                    case "5": excluir_animal()
+                    case "6": break
+
+                input("\nENTER")
+
+        case "2":
+            while True:
+                os.system('cls')
+                v = menu_secundario("VACINAS", """
+                1 - Cadastrar
+                2 - Listar
+                3 - Editar
+                4 - Excluir
+                5 - Voltar
+                """)
+
+                match v:
+                    case "1": cadastrar_vacina()
+                    case "2": listar_vacinas()
+                    case "3": editar_vacina()
+                    case "4": excluir_vacina()
+                    case "5": break
+
+                input("\nENTER")
+
+        case "3":
+            while True:
+                os.system('cls')
+                ag = menu_secundario("AGENDAMENTOS", """
+                1 - Agendar
+                2 - Listar
+                3 - Marcar aplicado
+                4 - marcar cancelado
+                5 - Editar data
+                6 - Excluir
+                7 - Voltar
+                """)
+
+                match ag:
+                    case "1": agendar_vacina()
+                    case "2": listar_agendamentos()
+                    case "3": marcar_aplicado()
+                    case "4": marcar_cancelado()
+                    case "5": editar_data_agendamento()
+                    case "6": excluir_agendamento()
+                    case "7": break
+
+                input("\nENTER")
+
+        case "4":
+            while True:
+                os.system('cls')
+                ag = menu_secundario("RELATÓRIOS", """
+                1 - Atrasados por período
+                2 - Aplicadas por período
+                3 - Agendadas por período
+                4 - Animais adquiridos/nascidos por período
+                5 - Animais mortos
+                6 - Total de vacinas aplicadas
+                7 - Histórico de vacina por animal
+                8 - Animais sem vacina aplicada ou agendada 
+                9 - Resumo geral
+                10 - Exportar relatório TXT 
+                11 - Exportar JSON
+                12 - Voltar
+                """)
+
+                match ag:
+                    case "1": relatorio_atrasados_periodo()
+                    case "2": relatorio_aplicadas_periodo()
+                    case "3": relatorio_agendadas_periodo()
+                    case "4": relatorio_animais_periodo()
+                    case "5": relatorio_animais_mortos()
+                    case "6": relatorio_qtd_vacinas()
+                    case "7": relatorio_historico_animal()
+                    case "8": relatorio_sem_vacina()
+                    case "9": relatorio_geral()
+                    case "10": gerar_relatorio_txt()
+                    case "11": exportar_json()
+                    case "12": break
+
+                input("\nENTER")
+
+        case "5":
+            break
+
+        case _:
+            print("Opção inválida")
+            input("\nENTER")
+
+c.close()
+conn.close()
+print("Sistema encerrado.")
